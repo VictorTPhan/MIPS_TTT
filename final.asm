@@ -8,6 +8,7 @@
 
 .data
 #tic tac toe board
+space: .asciiz " "
 rows: .asciiz "\n-----+-----+-----\n" 
 cols: .asciiz " | " 
 board1: .asciiz "    |     |     \n-----+-----+-----\n     |     |     \n-----+-----+-----\n     |     |     "
@@ -49,9 +50,23 @@ main:
 	#jump to make_board to print out the board setting
 	jal board_demo 
 	
+	gameLoop:	
+		#get user input
+		jal user_input
 	
-	jal user_input
+		#set new value for table
+		jal place_cell
 
+		#print out the board
+		jal curr_board
+	
+		#switch control to other player
+		jal switch_player_control
+		
+		j gameLoop
+	exitGameLoop:
+	
+	j exit
 		
 	
 choose_char:
@@ -125,6 +140,8 @@ board_demo:
 	li $v0, 4
 	syscall
 	
+	jr $ra
+	
 	
 user_input:
 	#print cell message
@@ -138,14 +155,16 @@ user_input:
 	
 	#pass in v0
 	move $a0, $v0
-	jal place_cell
+	jr $ra
 
 place_cell:
 	#push registers to stack
-	
+		sw $t0, ($sp)
+		subi $sp, $sp, 4
 	#procedure body
-		#t0 = $a0 * 4
+		#t0 = $a0 - 1 * 4
 		#this is the index to replace in the table
+		subi $a0, $a0, 1
 		mul $t0, $a0, 4
 		
 		#t1 = s1 (board) + t0 (offset)
@@ -155,24 +174,65 @@ place_cell:
 		lw $t2, ($t1)
 		
 		#is there already a value in the table? (is it not 0?)
-		bne $t2, $zero, curr_board
+		#I HAVE NOT ADDED THIS YET
 		
-		#which player is this?
-		
-		#TEMP
 		sw $s6, ($t1)
 	#result
 	#restore any registers
+		lw $t0, ($sp)
+		addi $sp, $sp, 4
 	#return
 	jr $ra
 
 curr_board:
 	#display the current board
 	#used after each player finishes a move
+	
+	move $t0, $s1
+	add $t1, $s1, 36
 
-	jal switch_player_control
+	#build the rows
+	buildAllRow:
+		beq $t0, $t1, exitBuildAllRow
+		
+		li $t2, 0
+		buildRow:
+			beq $t2, 3, exitBuildRow
+		
+			#print " "
+			la $a0, space
+			li $v0, 4
+			syscall
+		
+			#print table entry
+			lw $a0, ($t0)
+			li $v0, 1
+			syscall
+		
+			#print " "
+			la $a0, space
+			li $v0, 4
+			syscall
+		
+			#print "|"
+			la $a0, cols
+			li $v0, 4
+			syscall
+			
+			addi $t2, $t2, 1
+			addi $t0, $t0, 4
+			j buildRow
+		exitBuildRow:
+		
+		#print "\n-----+-----+-----\n" 
+		la $a0, rows
+		li $v0, 4
+		syscall
+		
+		j buildAllRow
+	exitBuildAllRow:
 
-	jal user_input
+	jr $ra
 
 switch_player_control:
 	#x is 1
@@ -183,7 +243,8 @@ switch_player_control:
 	switchToO: li $s6, 2
 	jr $ra
 
-exit: li $v0, 10
-      syscall 
+exit: 
+	li $v0, 10
+     	syscall 
       
 #end of program
