@@ -22,7 +22,7 @@ row3: .asciiz "  7  |  8  |  9  \n"
 #messages 
 welcome_msg: .asciiz "*****Welcome to Tic Tac Toe!!!*****\n"
 explain_msg: .asciiz "\nInput the cell number to enter your play!\n"
-choose_msg: .asciiz "\nEnter X or O: "
+choose_msg: .asciiz "\nEnter 1 for X and 2 for O: "
 playerX: .asciiz "\nYou are X.\n" 
 playerO: .asciiz "\nYou are O.\n"
 cell_msg: .asciiz "\nYour turn!\n\Choose your cell(1-9): "
@@ -30,7 +30,6 @@ compueter_msg: .asciiz "Computer's turn.\n\n"
 playerX_msg: "Player X's turn\n\n"
 
 board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
-buffer: .space 20
 
 .text
 main:
@@ -61,36 +60,48 @@ choose_char:
 	li $v0, 4
 	syscall
 	
-	#make user input their choice
-	li $v0, 8
+	#make user input their choice (1 for X and 2 for O)
+	li $v0, 5
 	
 	#store the user input into an address
-	la $a0, buffer
 	li $a1, 20
-	move $t0, $a0
 	syscall
+	
+	move $t0, $v0	
 	
 	#initialize x
-	la $t2, x	
+	li $t2, 1	
 	#initialize o
-	la $t3, o
+	la $t3, 2
 	
-	#if user input is X print playerX
-	#if user input is O print playerO
-	bne $t0, $t2, YouX
-	#print message that the user is playing O
-	la $a0, playerO
-	li $v0, 4
-	syscall
-	j exit
-	
-	#print message that the user is playing X
+	#if user input (t0) is X
+	beq $t0, $t2, YouX
+
+	YouO:
+		#print message that the user is playing O
+		la $a0, playerO
+		li $v0, 4
+		syscall
+		
+		#set s6 (control variable) to o
+		move $s6, $t3
+
+	#REMOVE LATER
+	la $s1, board
+	jr $ra
+
+
 	YouX:
+		#print message that the user is playing X
 		la $a0, playerX
 		li $v0, 4
 		syscall
 		
+		#set s6 (control variable) to x
+		move $s6, $t2
+		
 	la $s1, board
+	jr $ra
 
 #print out the board with cell numbers	
 board_demo: 
@@ -101,7 +112,6 @@ board_demo:
 	la $a0, rows
 	li $v0, 4
 	syscall
-	
 	
 	la $a0, row2
 	li $v0, 4
@@ -121,45 +131,57 @@ user_input:
 	la $a0, cell_msg
 	li $v0, 4
 	syscall
-	
-	
+		
 	#read cell number from user
 	li $v0, 5
-	
-	la $a0, buffer
-	li $a1, 20
-	move $t4, $a0
 	syscall
 	
-	beq $t4 ,1 , cell_1
-	beq $t4 ,2 , cell_2
-	beq $t4 ,3 , cell_3
-	beq $t4 ,4 , cell_4
-	beq $t4 ,5 , cell_5
-	beq $t4 ,6 , cell_6
-	beq $t4 ,7 , cell_7
-	beq $t4 ,8 , cell_8
-	beq $t4 ,9 , cell_9
+	#pass in v0
+	move $a0, $v0
+	jal place_cell
 
-cell_1:	
-	#check if the space is occupied
-	#place the char in the cell position
-	#both X and O
-	#print current board
-cell_2:
-cell_3:
-cell_4:
-cell_5:
-cell_6:
-cell_7:
-cell_8:
-cell_9:
+place_cell:
+	#push registers to stack
+	
+	#procedure body
+		#t0 = $a0 * 4
+		#this is the index to replace in the table
+		mul $t0, $a0, 4
+		
+		#t1 = s1 (board) + t0 (offset)
+		add $t1, $s1, $t0
+		
+		#t2 = value from table
+		lw $t2, ($t1)
+		
+		#is there already a value in the table? (is it not 0?)
+		bne $t2, $zero, curr_board
+		
+		#which player is this?
+		
+		#TEMP
+		sw $s6, ($t1)
+	#result
+	#restore any registers
+	#return
+	jr $ra
 
 curr_board:
 	#display the current board
 	#used after each player finishes a move
 
+	jal switch_player_control
 
+	jal user_input
+
+switch_player_control:
+	#x is 1
+	beq $s6, 1, switchToO	
+	li $s6, 1
+	jr $ra
+	
+	switchToO: li $s6, 2
+	jr $ra
 
 exit: li $v0, 10
       syscall 
