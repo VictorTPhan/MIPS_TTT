@@ -1,10 +1,8 @@
-#Min Jung--04/20/2022
-#I/O
-# X	print to board 
-# X	allow user input  choose the positions
-#	output the board with "O" marked on the position they chose
-# X	"X" = playerX
-# X	"O" = playerO
+#Min Jung, Victor Phan, _____, ____, _____
+#registers:
+#s1 - the board table (see .data)
+#s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
+#s6 - player control variable. If 1, player X is in control. If 2, player O is in control.
 
 .data
 #tic tac toe board
@@ -12,8 +10,8 @@ space: .asciiz " "
 rows: .asciiz "\n-----+-----+-----\n" 
 cols: .asciiz " | " 
 board1: .asciiz "    |     |     \n-----+-----+-----\n     |     |     \n-----+-----+-----\n     |     |     "
-x: .asciiz " X "
-o: .asciiz " O "
+x: .asciiz "X"
+o: .asciiz "O"
 #for empty spaces on the board
 empty: .asciiz "   "
 row1: .asciiz "\n  1  |  2  |  3  "
@@ -29,6 +27,7 @@ playerO: .asciiz "\nYou are O.\n"
 cell_msg: .asciiz "\nYour turn!\n\Choose your cell(1-9): "
 compueter_msg: .asciiz "Computer's turn.\n\n"
 playerX_msg: "Player X's turn\n\n"
+playerO_msg: "Player O's turn\n\n"
 
 board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -51,6 +50,8 @@ main:
 	jal board_demo 
 	
 	gameLoop:	
+		beq $s2, 1, exitGameLoop
+		
 		#get user input
 		jal user_input
 	
@@ -59,6 +60,9 @@ main:
 
 		#print out the board
 		jal curr_board
+	
+		#did someone win?
+		jal check_win_condition
 	
 		#switch control to other player
 		jal switch_player_control
@@ -143,12 +147,12 @@ board_demo:
 	jr $ra
 	
 	
-user_input:
+user_input:	
 	#print cell message
 	la $a0, cell_msg
 	li $v0, 4
 	syscall
-		
+
 	#read cell number from user
 	li $v0, 5
 	syscall
@@ -195,10 +199,15 @@ curr_board:
 	buildAllRow:
 		beq $t0, $t1, exitBuildAllRow
 		
+		#print " "
+		la $a0, space
+		li $v0, 4
+		syscall
+		
 		li $t2, 0
 		buildRow:
 			beq $t2, 3, exitBuildRow
-		
+			
 			#print " "
 			la $a0, space
 			li $v0, 4
@@ -235,12 +244,20 @@ curr_board:
 	jr $ra
 
 switch_player_control:
+
 	#x is 1
 	beq $s6, 1, switchToO	
 	li $s6, 1
 	jr $ra
 	
 	switchToO: li $s6, 2
+	jr $ra
+
+check_win_condition:
+	#check values in the board table to see if a match 3 has been made.
+	#if it has, check which numbers in the winning match correspond to which player.
+	#for example, a table of [1,0,2,  0,1,2,  2,0,1] is a winning match.
+	#the player who made the match is player 1.
 	jr $ra
 
 exit: 
