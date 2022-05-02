@@ -1,4 +1,4 @@
-#Min Jung, Victor Phan, _____, ____, _____
+#Min Jung, Victor Phan, Owen Lovett, ____, _____
 #registers:
 #s1 - the board table (see .data)
 #s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
@@ -28,6 +28,7 @@ cell_msg: .asciiz "\nYour turn!\n\Choose your cell(1-9): "
 compueter_msg: .asciiz "Computer's turn.\n\n"
 playerX_msg: "Player X's turn\n\n"
 playerO_msg: "Player O's turn\n\n"
+gamemode_msg: "\nEnter 1 for PVP or 2 to play against the computer (easy): \n"
 
 board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -43,11 +44,28 @@ main:
 	li $v0, 4
 	syscall
 	
+	#print gamemode message
+	la $a0, gamemode_msg
+	li $v0, 4
+	syscall
+	
+	#make user input their choice (1 for pvp and 2 for computer(easy))
+	li $v0, 5
+	syscall
+	
+	move $t4, $v0
+	
+	#initialize value for computer(easy)
+	li $t5, 2
+	
 	#allow user to choose to play either X or O
 	jal choose_char
 	
 	#jump to make_board to print out the board setting
 	jal board_demo 
+	
+	# if user imputs 2 then jump to gameLoopEasy
+	beq $t4, $t5, gameLoopEasy
 	
 	gameLoop:	
 		beq $s2, 1, exitGameLoop
@@ -68,11 +86,18 @@ main:
 		jal switch_player_control
 		
 		j gameLoop
-	exitGameLoop:
-	
-	j exit
 		
-	
+	exitGameLoop:
+		j exit
+		
+	gameLoopEasy:	
+		beq $s2, 1, exitGameLoop
+		
+		j exit
+		
+	exitGameLoopEasy:
+		j exit
+		
 choose_char:
 	#print message
 	la $a0, choose_msg
