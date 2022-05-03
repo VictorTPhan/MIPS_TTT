@@ -111,7 +111,42 @@ main:
 	gameLoopEasy:	
 		beq $s2, 1, exitGameLoop
 		
-		j exit
+		#get user input
+		jal user_input
+	
+		#set new value for table
+		jal place_cell
+
+		#print out the board
+		jal curr_board
+		
+		#did someone win?
+		jal check_win_condition
+		
+		#switch control to other player
+		jal switch_player_control
+		
+		#computer move
+		jal randomizer
+		
+		#set new value for table
+		jal place_cell
+		
+		#print computer
+		la $a0, computer_msg
+		li $v0, 4
+		syscall
+		
+		#print out the board
+		jal curr_board
+		
+		#did someone win?
+		jal check_win_condition
+		
+		#switch control to other player
+		jal switch_player_control
+
+		j gameLoopEasy
 		
 	exitGameLoopEasy:
 		j exit
@@ -187,9 +222,6 @@ board_demo:
 	li $v0, 4
 	syscall
 	
-	la $a0, cell_msg
-	li $v0, 4
-	syscall
 	
 	jr $ra
 	
@@ -307,6 +339,19 @@ check_win_condition:
 	#if it has, check which numbers in the winning match correspond to which player.
 	#for example, a table of [1,0,2,  0,1,2,  2,0,1] is a winning match.
 	#the player who made the match is player 1.
+	jr $ra
+	
+randomizer:
+		
+	#max number (0-8)
+	addi $a1, $zero, 9
+	
+	#random int into a0
+	addi $v0, $zero, 42
+	syscall
+	
+	#add 1 to a0 so range is 1-9
+	addi $a0, $a0, 1
 	jr $ra
 
 exit: 
