@@ -12,7 +12,7 @@
 # 	v0
 #	a0
 #	a1
-#	t0- t0 = $a0 - 1 * 4  (used in place_cell_
+#	t0- t0 = $a0 - 1 * 4  (used in place_cell)
 #	t1- t1 = s1 (board) + t0 (offset)  (used  in place_cell)
 #	t2 - to store value from , also to initialize X as 1
 #	t3 - use to initialize O as 2
@@ -262,7 +262,7 @@ place_cell:
 	#I HAVE NOT ADDED THIS YET
 		
 	sw $s6, ($t1)
-	#result
+	#result	
 	#restore any registers
 	lw $t0, ($sp)
 	addi $sp, $sp, 4
@@ -339,6 +339,41 @@ check_win_condition:
 	#if it has, check which numbers in the winning match correspond to which player.
 	#for example, a table of [1,0,2,  0,1,2,  2,0,1] is a winning match.
 	#the player who made the match is player 1.
+	
+	
+	check_win: #runs win1,win2,wni3 checks
+	#will add later if logic seems correct
+	
+	
+	
+	win1: 
+	#checks horizontal spaces for win [0,1,2]
+	addi $t6, $0, 0 # spot 0
+	lw $t7, board($t6)
+	addi $t6, $0, 4 # spot 1
+	lw $t8, board($t6)
+	addi $t6, $0, 8  # spot 2
+	lw $t9, board($t6)
+	and $t4, $t7, $t8 # $t4 = $t7 and $t8 (0 and 1)
+	and $t5, $t4, $t9 # $t5 = $t4 and $t9 (0 and 1 and 2)
+	beq $t5, $7, is_valid
+	
+	jr
+	
+	win2:
+	#checks vertical spaces for win [0,3,6]
+	
+	win3:
+	#checks diagonal spaces for win [0,4,8]
+	
+	is_valid
+	#checks to see if there are inputs and not spaces
+	bne $t5, $0 #will add later - goes to loop that displays if player or cpu won 
+	jr $ra
+	
+	
+	
+	
 	jr $ra
 	
 randomizer:
