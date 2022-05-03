@@ -1,15 +1,32 @@
-#Min Jung, Victor Phan, Owen Lovett, ____, _____
-#registers:
-#s1 - the board table (see .data)
-#s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
-#s6 - player control variable. If 1, player X is in control. If 2, player O is in control.
+#Min Jung, Victor Phan, Owen Lovett, ____, _____  -- 5/15/2022
+#Description: Create Tic-Tac -Toe game using MIPS
+#	Display game board.
+#	Allow user input.
+#	Allow PVP and P V. Computer
+
+#Registers used:
+#	s1 - the board table (see .data)
+#	s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
+#	s6 - player control variable. If 1, player X is in control. If 2, player O is in control.
+# 	v0
+#	a0
+#	a1
+#	t0- t0 = $a0 - 1 * 4  (used in place_cell_
+#	t1- t1 = s1 (board) + t0 (offset)  (used  in place_cell)
+#	t2 - to store value from , also to initialize X as 1
+#	t3 - use to initialize O as 2
+#	t4 - store user input their choice (1 for pvp and 2 for computer(easy))
+#	t5 - initialize value for computer(easy)
+#	ra - to return address
+#	sp- to create stack
+
+
 
 .data
 #tic tac toe board
 space: .asciiz " "
 rows: .asciiz "\n-----+-----+-----\n" 
 cols: .asciiz " | " 
-board1: .asciiz "    |     |     \n-----+-----+-----\n     |     |     \n-----+-----+-----\n     |     |     "
 x: .asciiz "X"
 o: .asciiz "O"
 #for empty spaces on the board
@@ -19,7 +36,7 @@ row2: .asciiz "  4  |  5  |  6  "
 row3: .asciiz "  7  |  8  |  9  \n"
 
 #messages 
-welcome_msg: .asciiz "*****Welcome to Tic Tac Toe!!!*****\n"
+welcome_msg: .asciiz "\n\n*****Welcome to Tic Tac Toe!!!*****\n"
 explain_msg: .asciiz "\nInput the cell number to enter your play!\n"
 choose_msg: .asciiz "\nEnter 1 for X and 2 for O: "
 playerX: .asciiz "\nYou are X.\n" 
@@ -28,7 +45,7 @@ cell_msg: .asciiz "\nYour turn!\n\Choose your cell(1-9): "
 compueter_msg: .asciiz "Computer's turn.\n\n"
 playerX_msg: "Player X's turn\n\n"
 playerO_msg: "Player O's turn\n\n"
-gamemode_msg: "\nEnter 1 for PVP or 2 to play against the computer (easy): \n"
+gamemode_msg: "\nEnter 1 for PVP or 2 to play against the computer (easy): "
 
 board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -188,28 +205,28 @@ user_input:
 
 place_cell:
 	#push registers to stack
-		sw $t0, ($sp)
-		subi $sp, $sp, 4
+	sw $t0, ($sp)
+	subi $sp, $sp, 4
 	#procedure body
-		#t0 = $a0 - 1 * 4
-		#this is the index to replace in the table
-		subi $a0, $a0, 1
-		mul $t0, $a0, 4
+	#t0 = $a0 - 1 * 4
+	#this is the index to replace in the table
+	subi $a0, $a0, 1
+	mul $t0, $a0, 4
 		
-		#t1 = s1 (board) + t0 (offset)
-		add $t1, $s1, $t0
+	#t1 = s1 (board) + t0 (offset)
+	add $t1, $s1, $t0
 		
-		#t2 = value from table
-		lw $t2, ($t1)
+	#t2 = value from table
+	lw $t2, ($t1)
 		
-		#is there already a value in the table? (is it not 0?)
-		#I HAVE NOT ADDED THIS YET
+	#is there already a value in the table? (is it not 0?)
+	#I HAVE NOT ADDED THIS YET
 		
-		sw $s6, ($t1)
+	sw $s6, ($t1)
 	#result
 	#restore any registers
-		lw $t0, ($sp)
-		addi $sp, $sp, 4
+	lw $t0, ($sp)
+	addi $sp, $sp, 4
 	#return
 	jr $ra
 
