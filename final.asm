@@ -1,4 +1,4 @@
-#Min Jung, Victor Phan, Owen Lovett, ____, _____  -- 5/15/2022
+#Min Jung, Victor Phan, Owen Lovett, Bailey Chean, _____  -- 5/15/2022
 #final.asm
 #Description: Create Tic-Tac -Toe game using MIPS
 #	Display game board.
@@ -43,7 +43,7 @@ choose_msg: .asciiz "\nEnter 1 for X and 2 for O: "
 playerX: .asciiz "\nYou are X.\n" 
 playerO: .asciiz "\nYou are O.\n"
 cell_msg: .asciiz "\nYour turn!\n\Choose your cell(1-9): "
-compueter_msg: .asciiz "Computer's turn.\n\n"
+computer_msg: .asciiz "Computer's turn.\n\n"
 playerX_msg: "Player X's turn\n\n"
 playerO_msg: "Player O's turn\n\n"
 gamemode_msg: "\nEnter 1 for PVP or 2 to play against the computer (easy): "
@@ -187,7 +187,13 @@ board_demo:
 	li $v0, 4
 	syscall
 	
+	la $a0, cell_msg
+	li $v0, 4
+	syscall
+	
 	jr $ra
+	
+	
 	
 	
 user_input:	
