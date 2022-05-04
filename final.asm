@@ -9,6 +9,7 @@
 #	s1 - the board table (see .data)
 #	s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
 #	s6 - player control variable. If 1, player X is in control. If 2, player O is in control.
+#	s4 - store user input their choice (1 for pvp and 2 for computer(easy))
 # 	v0
 #	a0
 #	a1
@@ -16,7 +17,6 @@
 #	t1- t1 = s1 (board) + t0 (offset)  (used  in place_cell)
 #	t2 - to store value from , also to initialize X as 1
 #	t3 - use to initialize O as 2
-#	t4 - store user input their choice (1 for pvp and 2 for computer(easy))
 #	t5 - initialize value for computer(easy)
 #	ra - to return address
 #	sp- to create stack
@@ -44,9 +44,13 @@ playerX: .asciiz "\nYou are X.\n"
 playerO: .asciiz "\nYou are O.\n"
 cell_msg: .asciiz "\nYour turn!\n\Choose your cell(1-9): "
 computer_msg: .asciiz "Computer's turn.\n\n"
-playerX_msg: "Player X's turn\n\n"
-playerO_msg: "Player O's turn\n\n"
-gamemode_msg: "\nEnter 1 for PVP or 2 to play against the computer (easy): "
+playerX_msg: .asciiz "Player X's turn\n\n"
+playerO_msg: .asciiz "Player O's turn\n\n"
+gamemode_msg: .asciiz "\nEnter 1 for PVP or 2 to play against the computer (easy): "
+win_msg: .asciiz "We have a winner!"
+winner_player_X: .asciiz "Player X! \n"
+winner_player_O: .asciiz "Player O! \n"
+winner_computer: .asciiz "the Computer! \n"
 
 board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -71,7 +75,7 @@ main:
 	li $v0, 5
 	syscall
 	
-	move $t4, $v0
+	move $s4, $v0
 	
 	#initialize value for computer(easy)
 	li $t5, 2
@@ -83,7 +87,7 @@ main:
 	jal board_demo 
 	
 	# if user imputs 2 then jump to gameLoopEasy
-	beq $t4, $t5, gameLoopEasy
+	beq $s4, $t5, gameLoopEasy
 	
 	gameLoop:	
 		beq $s2, 1, exitGameLoop
@@ -98,6 +102,7 @@ main:
 		jal curr_board
 	
 		#did someone win?
+		#if someone won, we jump straight to the exit
 		jal check_win_condition
 	
 		#switch control to other player
@@ -121,6 +126,7 @@ main:
 		jal curr_board
 		
 		#did someone win?
+		#if someone won, we jump straight to the exit
 		jal check_win_condition
 		
 		#switch control to other player
@@ -335,49 +341,99 @@ switch_player_control:
 	jr $ra
 	
 	
-check_win_condition: #runs win1,win2,wni3 checks
+check_win_condition:
 #check values in the board table to see if a match 3 has been made.
 	#if it has, check which numbers in the winning match correspond to which player.
 	#for example, a table of [1,0,2,  0,1,2,  2,0,1] is a winning match.
 	#the player who made the match is player 1.
 
+#save ra in sp
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
 
-#will add later if logic seems correct
+#procedure
+	#HORIZONTAL
+	li $a0, 0
+	li $a1, 4
+	li $a2, 8
+	jal checkLine
+	
+	li $a0, 12
+	li $a1, 16
+	li $a2, 20
+	jal checkLine
+	
+	li $a0, 24
+	li $a1, 28
+	li $a2, 32
+	jal checkLine
+	
+	#VERTICAL
+	li $a0, 0
+	li $a1, 12
+	li $a2, 24
+	jal checkLine
+	
+	li $a0, 4
+	li $a1, 16
+	li $a2, 28
+	jal checkLine
+	
+	li $a0, 8
+	li $a1, 20
+	li $a2, 32
+	jal checkLine
+	
+	#DIAGONAL
+	li $a0, 0
+	li $a1, 16
+	li $a2, 32
+	jal checkLine
+	
+	li $a0, 8
+	li $a1, 16
+	li $a2, 24
+	jal checkLine
 
-	
-	
-win1: 
-#checks horizontal spaces for win [0,1,2]
-addi $t6, $0, 0 # spot 0
-lw $t7, board($t6)
-addi $t6, $0, 4 # spot 1
-lw $t8, board($t6)
-addi $t6, $0, 8  # spot 2
-lw $t9, board($t6)
-and $t4, $t7, $t8 # $t4 = $t7 and $t8 (0 and 1)
-and $t5, $t4, $t9 # $t5 = $t4 and $t9 (0 and 1 and 2)
-beq $t5, $7, is_valid
+#pop ra from sp
+	lw $ra, ($sp)
+	addi $sp, $sp, 4
 
-jr $ra
-	
-win2:
-#checks vertical spaces for win [0,3,6]
-	
-win3:
-#checks diagonal spaces for win [0,4,8]
-	
-is_valid
-#checks to see if there are inputs and not spaces
-bne $t5, $0 #will add later - goes to loop that displays if player or cpu won 
-jr $ra
-	
-	
-	
-	
-jr $ra
-	
+#return
+	jr $ra
+
+
+checkLine:
+#a0 - a2   -   indices of positions to check
+#a3 - which player to check for
+
+#save ra in sp
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
+
+#procedure
+	add $t3, $a0, $s1
+	add $t4, $a1, $s1
+	add $t5, $a2, $s1
+
+	lw $t0, ($t3)
+	lw $t1, ($t4)
+	lw $t2, ($t5)
+
+	bne $t0, $s6, getOut
+	bne $t1, $s6, getOut
+	bne $t2, $s6, getOut
+
+	j exit
+
+#pop ra from sp
+	addi $sp, $sp, 4
+	lw $ra, ($sp)
+
+#return
+	getOut: jr $ra
+			
 randomizer:
-		
 	#max number (0-8)
 	addi $a1, $zero, 9
 	
@@ -390,6 +446,10 @@ randomizer:
 	jr $ra
 
 exit: 
+	la $a0, win_msg
+	li $v0, 4
+	syscall
+	
 	li $v0, 10
      	syscall 
       
