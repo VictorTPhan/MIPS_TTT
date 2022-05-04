@@ -10,6 +10,7 @@
 #	s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
 #	s6 - player control variable. If 1, player X is in control. If 2, player O is in control.
 #	s4 - store user input their choice (1 for pvp and 2 for computer(easy))
+#	s5 - initialize value for computer(easy)
 # 	v0
 #	a0
 #	a1
@@ -17,7 +18,6 @@
 #	t1- t1 = s1 (board) + t0 (offset)  (used  in place_cell)
 #	t2 - to store value from , also to initialize X as 1
 #	t3 - use to initialize O as 2
-#	t5 - initialize value for computer(easy)
 #	ra - to return address
 #	sp- to create stack
 
@@ -75,10 +75,11 @@ main:
 	li $v0, 5
 	syscall
 	
+	#s4 will now represent if PVP or CPU
 	move $s4, $v0
 	
 	#initialize value for computer(easy)
-	li $t5, 2
+	li $s5, 2
 	
 	#allow user to choose to play either X or O
 	jal choose_char
@@ -87,7 +88,7 @@ main:
 	jal board_demo 
 	
 	# if user imputs 2 then jump to gameLoopEasy
-	beq $s4, $t5, gameLoopEasy
+	beq $s4, $s5, gameLoopEasy
 	
 	gameLoop:	
 		beq $s2, 1, exitGameLoop
@@ -265,7 +266,7 @@ place_cell:
 	lw $t2, ($t1)
 		
 	#is there already a value in the table? (is it not 0?)
-	#I HAVE NOT ADDED THIS YET
+	#TODO
 		
 	sw $s6, ($t1)
 	#result	
@@ -406,29 +407,27 @@ check_win_condition:
 checkLine:
 #a0 - a2   -   indices of positions to check
 #a3 - which player to check for
-
-#save ra in sp
-	subi $sp, $sp, 4
-	sw $ra, ($sp)
+#s1 - base address of board
+#s6 - the player during this turn (1 for X, 2 for O)
 
 #procedure
+	#create address locations
 	add $t3, $a0, $s1
 	add $t4, $a1, $s1
 	add $t5, $a2, $s1
 
+	#get values from table
 	lw $t0, ($t3)
 	lw $t1, ($t4)
 	lw $t2, ($t5)
 
+	#do any of these values not match $s6?
 	bne $t0, $s6, getOut
 	bne $t1, $s6, getOut
 	bne $t2, $s6, getOut
 
+	#we have a match
 	j exit
-
-#pop ra from sp
-	addi $sp, $sp, 4
-	lw $ra, ($sp)
 
 #return
 	getOut: jr $ra
