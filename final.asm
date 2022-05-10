@@ -9,6 +9,7 @@
 #	s1 - the board table (see .data)
 #	s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
 #	s6 - player control variable. If 1, player X is in control. If 2, player O is in control.
+#	s3 - input flag. If 1, input is valid. If 0, input is invalid.
 #	s4 - store user input their choice (1 for pvp and 2 for computer(easy))
 #	s5 - initialize value for computer(easy)
 # 	v0
@@ -51,6 +52,8 @@ win_msg: .asciiz "We have a winner!"
 winner_player_X: .asciiz "Player X! \n"
 winner_player_O: .asciiz "Player O! \n"
 winner_computer: .asciiz "the Computer! \n"
+out_of_bounds: .asciiz "Please enter a valid input!\n"
+already_there: .asciiz "There's already a tile there!\n"
 
 board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -66,17 +69,29 @@ main:
 	li $v0, 4
 	syscall
 	
-	#print gamemode message
-	la $a0, gamemode_msg
-	li $v0, 4
-	syscall
+	#make sure user input is valid
+	invalidGameTypeLoop:
+		beq $s3, 1, validGameTypeInput
 	
-	#make user input their choice (1 for pvp and 2 for computer(easy))
-	li $v0, 5
-	syscall
+		#print gamemode message
+		la $a0, gamemode_msg
+		li $v0, 4
+		syscall
 	
-	#s4 will now represent if PVP or CPU
-	move $s4, $v0
+		#make user input their choice (1 for pvp and 2 for computer(easy))
+		li $v0, 5
+		syscall
+	
+		move $a0, $v0
+		li $a1, 1
+		li $a2, 2
+		jal validation
+		
+		move $s3, $v0
+		move $s4, $a0
+		
+		j invalidGameTypeLoop
+	validGameTypeInput:
 	
 	#initialize value for computer(easy)
 	li $s5, 2
@@ -159,19 +174,34 @@ main:
 		j exit
 		
 choose_char:
-	#print message
-	la $a0, choose_msg
-	li $v0, 4
-	syscall
+	#save ra in sp
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
+
+	li $s3, 0
+
+	invalidCharInput:
+		beq $s3, 1, validCharInput
+		
+		#print message
+		la $a0, choose_msg
+		li $v0, 4
+		syscall
 	
-	#make user input their choice (1 for X and 2 for O)
-	li $v0, 5
-	
-	#store the user input into an address
-	li $a1, 20
-	syscall
-	
-	move $t0, $v0	
+		#make user input their choice (1 for X and 2 for O)
+		li $v0, 5
+		syscall
+		
+		move $a0, $v0
+		li $a1, 1
+		li $a2, 2
+		jal validation
+		
+		move $s3, $v0
+		move $t0, $a0	
+		
+		j invalidCharInput
+	validCharInput:
 	
 	#initialize x
 	li $t2, 1	
@@ -190,10 +220,7 @@ choose_char:
 		#set s6 (control variable) to o
 		move $s6, $t3
 
-	#REMOVE LATER
-	la $s1, board
-	jr $ra
-
+	j selected
 
 	YouX:
 		#print message that the user is playing X
@@ -204,8 +231,13 @@ choose_char:
 		#set s6 (control variable) to x
 		move $s6, $t2
 		
-	la $s1, board
-	jr $ra
+	selected:	
+		#save ra in sp
+		lw $ra, ($sp)
+		addi $sp, $sp, 4
+	
+		la $s1, board
+		jr $ra
 
 #print out the board with cell numbers	
 board_demo: 
@@ -229,24 +261,85 @@ board_demo:
 	li $v0, 4
 	syscall
 	
-	
 	jr $ra
 	
+#validation
+#a0 will define the input
+#a1 = lower bound
+#a2 = upper bound
+validation:
+	blt $a0, $a1, invalid
+	bgt $a0, $a2, invalid
 	
+	li $v0, 1
+	jr $ra
 	
+	invalid:
+		la $a0, out_of_bounds
+		li $v0, 4
+		syscall
+		li $v0, 0
+		jr $ra
+		
+check_if_not_overwriting:
+	#locate corresponding value in table
+	mul $t0, $a0, 4
+	subi $t0, $t0, 4
+	
+	#t1 = s1 (board) + t0 (offset)
+	add $t1, $s1, $t0
+	
+	#t2 = value from table
+	lw $t2, ($t1)
+	
+	bne $t2, 0, cannotOverwrite
+	
+	li $v0, 1
+	jr $ra
+	
+	cannotOverwrite:
+		la $a0, already_there
+		li $v0, 4
+		syscall
+		li $v0, 0
+		jr $ra
 	
 user_input:	
-	#print cell message
-	la $a0, cell_msg
-	li $v0, 4
-	syscall
-
-	#read cell number from user
-	li $v0, 5
-	syscall
+	#push to stack
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
 	
-	#pass in v0
-	move $a0, $v0
+	li $s3, 0
+	invalidInputLoop:
+		beq $s3, 1, validInput
+	
+		#print cell message
+		la $a0, cell_msg
+		li $v0, 4
+		syscall
+	
+		#read cell number from user
+		li $v0, 5
+		syscall
+		
+		move $a0, $v0
+		li $a1, 1
+		li $a2, 9
+		jal validation
+		
+		move $s3, $v0
+		move $v0, $a0
+		
+		jal check_if_not_overwriting
+		move $s3, $v0
+	
+		j invalidInputLoop
+	validInput:
+	
+	#pop from stack
+	lw $ra, ($sp)
+	addi $sp, $sp, 4
+	
 	jr $ra
 
 place_cell:
@@ -283,6 +376,10 @@ curr_board:
 	move $t0, $s1
 	add $t1, $s1, 36
 
+	#store $ra
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
+
 	#build the rows
 	buildAllRow:
 		beq $t0, $t1, exitBuildAllRow
@@ -301,10 +398,8 @@ curr_board:
 			li $v0, 4
 			syscall
 		
-			#print table entry
 			lw $a0, ($t0)
-			li $v0, 1
-			syscall
+			jal print_symbol
 		
 			#print " "
 			la $a0, space
@@ -328,11 +423,37 @@ curr_board:
 		
 		j buildAllRow
 	exitBuildAllRow:
+	
+	#pop $ra
+	lw $ra, ($sp)
+	addi $sp, $sp, 4
 
 	jr $ra
 
-switch_player_control:
+print_symbol:
+	#a0 - a value from board (s1)
+	beq $a0, 1, printOne
+	beq $a0, 2, printTwo
+	
+	la $a0, space
+	
+	li $v0, 4
+	syscall
+	jr $ra
+	
+	printOne: la $a0, x
+	
+	li $v0, 4
+	syscall
+	jr $ra
+	
+	printTwo: la $a0, o
+	
+	li $v0, 4
+	syscall
+	jr $ra
 
+switch_player_control:
 	#x is 1
 	beq $s6, 1, switchToO	
 	li $s6, 1
@@ -402,7 +523,6 @@ check_win_condition:
 
 #return
 	jr $ra
-
 
 checkLine:
 #a0 - a2   -   indices of positions to check
