@@ -70,6 +70,9 @@ main:
 	syscall
 	
 	#make sure user input is valid
+	#s3 represents whether an input is valid or not.
+	#	0 = invalid
+	#	1 = valid
 	invalidGameTypeLoop:
 		beq $s3, 1, validGameTypeInput
 	
@@ -82,12 +85,17 @@ main:
 		li $v0, 5
 		syscall
 	
+		#validation(a0, 1, 2)
+		#will check is a0 is between 1 and 2 (inclusive)
 		move $a0, $v0
 		li $a1, 1
 		li $a2, 2
 		jal validation
 		
+		#save result to s3
 		move $s3, $v0
+		
+		#save input to s4
 		move $s4, $a0
 		
 		j invalidGameTypeLoop
@@ -173,11 +181,32 @@ main:
 	exitGameLoopEasy:
 		j exit
 		
+
+#function:
+#	will allow user to choose which symbol they want.
+#	asks user for input from 1 to 2.
+#		1 = X
+#		2 = O
+#registers:
+#	sp - stack pointer
+#	ra - return addres
+#	s3 - whether an input is valid or not.
+#		0 = invalid
+#		1 = valid
+#	a0 - user's input (that is then saved to t0)
+#	v0 - output of validation function (that is then saved to s3)
+#	t0 - user's input
+#	t2 - const 1
+#	t3 - const 2
+#	s6 - control variable
+#		1 - player X's turn
+#		2 - player O's turn
 choose_char:
-	#save ra in sp
+	#push ra in sp
 	subi $sp, $sp, 4
 	sw $ra, ($sp)
 
+	#assume that user input will be invalid
 	li $s3, 0
 
 	invalidCharInput:
@@ -192,12 +221,17 @@ choose_char:
 		li $v0, 5
 		syscall
 		
+		#validation(a0, 1, 2)
+		#will check is a0 is between 1 and 2 (inclusive)
 		move $a0, $v0
 		li $a1, 1
 		li $a2, 2
 		jal validation
 		
+		#save result to s3
 		move $s3, $v0
+		
+		#save input to t0
 		move $t0, $a0	
 		
 		j invalidCharInput
@@ -232,7 +266,7 @@ choose_char:
 		move $s6, $t2
 		
 	selected:	
-		#save ra in sp
+		#pop ra from sp
 		lw $ra, ($sp)
 		addi $sp, $sp, 4
 	
@@ -262,11 +296,18 @@ board_demo:
 	syscall
 	
 	jr $ra
-	
-#validation
-#a0 will define the input
-#a1 = lower bound
-#a2 = upper bound
+
+
+#function:
+#	will determine if an input is between a min and max (inclusive)
+#registers:
+#	ra - return addres
+#	a0 - value to determine
+#	a1 - min
+#	a2 - max
+#	v0 - output
+#		0 - invalid
+#		1 - valid
 validation:
 	blt $a0, $a1, invalid
 	bgt $a0, $a2, invalid
@@ -281,6 +322,20 @@ validation:
 		li $v0, 0
 		jr $ra
 		
+#function:
+#	will determine if a desired location on the board has been taken.
+#registers:
+#	ra - return addres
+#	s3 - whether an input is valid or not.
+#		0 = invalid
+#		1 = valid
+#	a0 - value to determine
+#	t0 - offset for table lookup
+#	t1 - address of desired location in board
+#	t2 - value at address t1
+#	v0 - output
+#		0 - invalid (user is trying to overwrite)
+#		1 - valid (spot is empty)
 check_if_not_overwriting:
 	#locate corresponding value in table
 	mul $t0, $a0, 4
@@ -292,11 +347,14 @@ check_if_not_overwriting:
 	#t2 = value from table
 	lw $t2, ($t1)
 	
+	#is the spot empty?
 	bne $t2, 0, cannotOverwrite
 	
+	#if so, we're good to go
 	li $v0, 1
 	jr $ra
 	
+	#if not, print a warning
 	cannotOverwrite:
 		la $a0, already_there
 		li $v0, 4
@@ -304,12 +362,30 @@ check_if_not_overwriting:
 		li $v0, 0
 		jr $ra
 	
+#function:
+#	will allow user to specify location on a board to play
+#	from 1 to 9 (inclusive)
+#registers:
+#	sp - stack pointer
+#	ra - return address
+#	s3 - whether an input is valid or not.
+#		0 = invalid
+#		1 = valid
+#	a0 - value to determine
+#	t0 - offset for table lookup
+#	t1 - address of desired location in board
+#	t2 - value at address t1
+#	v0 - output
+#		0 - invalid (user is trying to overwrite)
+#		1 - valid (spot is empty)
 user_input:	
 	#push to stack
 	subi $sp, $sp, 4
 	sw $ra, ($sp)
 	
+	#assume input is invalid
 	li $s3, 0
+	
 	invalidInputLoop:
 		beq $s3, 1, validInput
 	
@@ -322,15 +398,19 @@ user_input:
 		li $v0, 5
 		syscall
 		
+		#validation(a0, 1, 9)
+		#will check is a0 is between 1 and 9 (inclusive)
 		move $a0, $v0
 		li $a1, 1
 		li $a2, 9
 		jal validation
 		
+		#save result to s3
 		move $s3, $v0
-		move $v0, $a0
 		
 		jal check_if_not_overwriting
+		
+		#save result to s3
 		move $s3, $v0
 	
 		j invalidInputLoop
@@ -342,11 +422,21 @@ user_input:
 	
 	jr $ra
 
+
+#function:
+#	writes new value into table
+#registers:
+#	ra - return address
+#	s3 - whether an input is valid or not.
+#		0 = invalid
+#		1 = valid
+#	a0 - index to place tile on (assume empty spot)
+#	t0 - offset for table lookup
+#	t1 - address of desired location in board
+#	s6 - control variable
+#		1 - player X's turn
+#		2 - player O's turn
 place_cell:
-	#push registers to stack
-	sw $t0, ($sp)
-	subi $sp, $sp, 4
-	#procedure body
 	#t0 = $a0 - 1 * 4
 	#this is the index to replace in the table
 	subi $a0, $a0, 1
@@ -355,33 +445,35 @@ place_cell:
 	#t1 = s1 (board) + t0 (offset)
 	add $t1, $s1, $t0
 		
-	#t2 = value from table
-	lw $t2, ($t1)
-		
-	#is there already a value in the table? (is it not 0?)
-	#TODO
-		
+	#save current player's symbol in table location
 	sw $s6, ($t1)
-	#result	
-	#restore any registers
-	lw $t0, ($sp)
-	addi $sp, $sp, 4
+	
 	#return
 	jr $ra
 
-curr_board:
-	#display the current board
-	#used after each player finishes a move
-	
-	move $t0, $s1
-	add $t1, $s1, 36
 
-	#store $ra
+#function:
+#	displays the current board
+#registers:
+#	ra - return address
+#	a0 - arguments for syscall
+#	v0 - syscall variable
+#	t0 - indices of table units (from units 1 to 9)
+#	t1 - stopper for t0
+#	t2 - which tile in the row you are currently on
+curr_board:
+	#push $ra to stack
 	subi $sp, $sp, 4
 	sw $ra, ($sp)
 
+	#i = 0
+	move $t0, $s1
+	#max = 36
+	add $t1, $s1, 36
+
 	#build the rows
 	buildAllRow:
+		#while (i<=36)
 		beq $t0, $t1, exitBuildAllRow
 		
 		#print " "
@@ -389,8 +481,10 @@ curr_board:
 		li $v0, 4
 		syscall
 		
+		#j = 0
 		li $t2, 0
 		buildRow:
+			#while (j<=3)
 			beq $t2, 3, exitBuildRow
 			
 			#print " "
@@ -398,6 +492,7 @@ curr_board:
 			li $v0, 4
 			syscall
 		
+			#print_symbol(a0)
 			lw $a0, ($t0)
 			jal print_symbol
 		
@@ -411,7 +506,10 @@ curr_board:
 			li $v0, 4
 			syscall
 			
+			#j++
 			addi $t2, $t2, 1
+			
+			#i+=4
 			addi $t0, $t0, 4
 			j buildRow
 		exitBuildRow:
@@ -430,31 +528,49 @@ curr_board:
 
 	jr $ra
 
+
+#function:
+#	prints requested symbols
+#registers:
+#	ra - return address
+#	a0 - value from table to print/arguments for syscall
+#	v0 - syscall variable
 print_symbol:
-	#a0 - a value from board (s1)
+	#if a0 is 1, print "X"
 	beq $a0, 1, printOne
+	
+	#if a0 is 2, print "O"
 	beq $a0, 2, printTwo
 	
+	#if a0 is 0, print " "
 	la $a0, space
-	
 	li $v0, 4
 	syscall
 	jr $ra
 	
+	#print "X"
 	printOne: la $a0, x
 	
 	li $v0, 4
 	syscall
 	jr $ra
 	
+	#print "O"
 	printTwo: la $a0, o
 	
 	li $v0, 4
 	syscall
 	jr $ra
 
+
+#function:
+#	switches control of t6 from 1 to 2 and vice-versa
+#registers:
+#	ra - return address
+#	s6 - control variable
+#		1 - player X's turn
+#		2 - player O's turn
 switch_player_control:
-	#x is 1
 	beq $s6, 1, switchToO	
 	li $s6, 1
 	jr $ra
@@ -463,17 +579,21 @@ switch_player_control:
 	jr $ra
 	
 	
+#function:
+#	check values in the board table to see if a match 3 has been made.
+#		if it has, check which numbers in the winning match correspond to which player.
+#		for example, a table of [1,0,2,  0,1,2,  2,0,1] is a winning match.
+#		the player who made the match is player 1.
+#registers:
+#	sp - stack pointer
+#	ra - return address
+#	a0-a2 - indices of positions to check
 check_win_condition:
-#check values in the board table to see if a match 3 has been made.
-	#if it has, check which numbers in the winning match correspond to which player.
-	#for example, a table of [1,0,2,  0,1,2,  2,0,1] is a winning match.
-	#the player who made the match is player 1.
 
-#save ra in sp
+	#save ra in sp
 	subi $sp, $sp, 4
 	sw $ra, ($sp)
 
-#procedure
 	#HORIZONTAL
 	li $a0, 0
 	li $a1, 4
@@ -517,20 +637,25 @@ check_win_condition:
 	li $a2, 24
 	jal checkLine
 
-#pop ra from sp
+	#pop ra from sp
 	lw $ra, ($sp)
 	addi $sp, $sp, 4
 
-#return
 	jr $ra
 
-checkLine:
-#a0 - a2   -   indices of positions to check
-#a3 - which player to check for
-#s1 - base address of board
-#s6 - the player during this turn (1 for X, 2 for O)
 
-#procedure
+#function:
+#	checks to see if 3 given values match the current player's value.
+#registers:
+#	ra - return address
+#	a0-a2 - indices of positions to check
+#	s1 - base address of board
+#	t0-t2 - values from table
+#	t3-t5 - address locations
+#	s6 - control variable
+#		1 - player X's turn
+#		2 - player O's turn
+checkLine:
 	#create address locations
 	add $t3, $a0, $s1
 	add $t4, $a1, $s1
@@ -549,7 +674,6 @@ checkLine:
 	#we have a match
 	j exit
 
-#return
 	getOut: jr $ra
 			
 randomizer:
