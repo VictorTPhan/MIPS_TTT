@@ -1,4 +1,4 @@
-#Min Jung, Victor Phan, Owen Lovett, Bailey Chean, _____  -- 5/15/2022
+#Min Jung, Victor Phan, Owen Lovett, Bailey Chean, Sunveer Bhullar  -- 5/15/2022
 #final.asm
 #Description: Create Tic-Tac -Toe game using MIPS
 #	Display game board.
@@ -8,7 +8,10 @@
 #Registers used:
 #	s1 - the board table (see .data)
 #	s2 - win state. If 0, no winner. If 1, somebody has won. Depends on what s6 is
+#	s4 - initialized to 1
+#	s5 - initialized to 2
 #	s6 - player control variable. If 1, player X is in control. If 2, player O is in control.
+#	s7 - used to hold a value to check for taken positions
 # 	v0
 #	a0
 #	a1
@@ -18,6 +21,10 @@
 #	t3 - use to initialize O as 2
 #	t4 - store user input their choice (1 for pvp and 2 for computer(easy))
 #	t5 - initialize value for computer(easy)
+#	t6 - used as a pointer in computer(hard)
+#	t7 - used to hold a position in computer(hard)
+#	t8 - used to hold a position in computer(hard)
+#	t9 - used to hold a position in computer(hard)
 #	ra - to return address
 #	sp- to create stack
 
@@ -46,9 +53,9 @@ cell_msg: .asciiz "\nYour turn!\n\Choose your cell(1-9): "
 computer_msg: .asciiz "Computer's turn.\n\n"
 playerX_msg: "Player X's turn\n\n"
 playerO_msg: "Player O's turn\n\n"
-gamemode_msg: "\nEnter 1 for PVP or 2 to play against the computer (easy): "
+gamemode_msg: "\nEnter 1 for PVP, 2 to play against the computer (easy), or 3 to play against the computer (hard): "
 
-board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
+board: .word -1, -2, -3, -4, -5, -6, -7, -8, -9
 
 .text
 main:
@@ -84,6 +91,10 @@ main:
 	
 	# if user imputs 2 then jump to gameLoopEasy
 	beq $t4, $t5, gameLoopEasy
+	
+	# if user imputs 3 then jump to gameLoopHard
+	addi $t5, $t5, 1
+	beq $t4, $t5, gameLoopHard
 	
 	gameLoop:	
 		beq $s2, 1, exitGameLoop
@@ -150,6 +161,53 @@ main:
 		
 	exitGameLoopEasy:
 		j exit
+		
+#-------------------------------------------------------------------------------------------------------------------------
+		
+	gameLoopHard:	
+		beq $s2, 1, exitGameLoop
+		
+		#get user input
+		jal user_input
+	
+		#set new value for table
+		jal place_cell
+
+		#print out the board
+		jal curr_board
+		
+		#did someone win?
+		jal check_win_condition
+		
+		#switch control to other player
+		jal switch_player_control
+		
+		#computer move
+		jal hardBot
+		
+		#set new value for table
+		#jal place_cell
+		
+		#print computer's turn
+		la $a0, computer_msg
+		li $v0, 4
+		syscall
+		
+		#print out the board
+		jal curr_board
+		
+		#did someone win?
+		jal check_win_condition
+		
+		#switch control to other player
+		jal switch_player_control
+
+		j gameLoopHard
+		
+	exitGameLoopHard:
+		j exit
+		
+#-------------------------------------------------------------------------------------------------------------------------
 		
 choose_char:
 	#print message
@@ -356,7 +414,7 @@ addi $t6, $0, 8  # spot 2
 lw $t9, board($t6)
 and $t4, $t7, $t8 # $t4 = $t7 and $t8 (0 and 1)
 and $t5, $t4, $t9 # $t5 = $t4 and $t9 (0 and 1 and 2)
-beq $t5, $7, is_valid
+#beq $t5, $7, is_valid
 
 jr $ra
 	
@@ -366,10 +424,10 @@ win2:
 win3:
 #checks diagonal spaces for win [0,4,8]
 	
-is_valid
+#is_valid
 #checks to see if there are inputs and not spaces
-bne $t5, $0 #will add later - goes to loop that displays if player or cpu won 
-jr $ra
+#bne $t5, $0 #will add later - goes to loop that displays if player or cpu won 
+#jr $ra
 	
 	
 	
@@ -388,6 +446,310 @@ randomizer:
 	#add 1 to a0 so range is 1-9
 	addi $a0, $a0, 1
 	jr $ra
+	
+#-------------------------------------------------------------------------------------------------------------------------------
+
+hardBot:
+	# used to initialize x and o values
+	li $s4, 1
+	li $s5, 2
+	 
+	# store return address
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	# All the different combinations for a win
+	
+	# Row 1: 
+	li $t6, 0 
+	lw $t7, board($t6)	# position 1
+	li $t6, 4 
+	lw $t8, board($t6)	# position 2
+	li $t6, 8  
+	lw $t9, board($t6)	# position 3
+	
+	Row1_1:	
+		li $t6, 8		# 3rd position on the board
+		lw $s7, board($t6)	# Get the value in position 3
+		beq $s4, $s7, Row1_2	# If there is already a X in this position, move on to check the next combination
+		beq $s5, $s7, Row1_2	# If there is already a X in this position, move on to check the next combination
+				
+		beq $t7, $t8, P3	# If position 2 and 3 have the same value, have a character be placed in position 3 to either win or stop opponent
+	Row1_2:
+		li $t6, 4
+		lw $s7, board($t6)
+		beq $s4, $s7, Row1_3
+		beq $s5, $s7, Row1_3
+		
+		beq $t7, $t9, P2
+	Row1_3:
+		li $t6, 0
+		lw $s7, board($t6)
+		beq $s4, $s7, Row2_1
+		beq $s5, $s7, Row2_1
+		
+		beq $t8, $t9, P1
+	
+	# Row 2:
+	li $t6, 12 
+	lw $t7, board($t6)	# position 4
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 20  
+	lw $t9, board($t6)	# position 6
+	
+	Row2_1:
+		li $t6, 20
+		lw $s7, board($t6)
+		beq $s4, $s7, Row2_2
+		beq $s5, $s7, Row2_2
+		
+		beq $t7, $t8, P6
+	Row2_2:
+		li $t6, 16
+		lw $s7, board($t6)
+		beq $s4, $s7, Row2_3
+		beq $s5, $s7, Row2_3
+		
+		beq $t7, $t9, P5
+	Row2_3:
+		li $t6, 12
+		lw $s7, board($t6)
+		beq $s4, $s7, Row3_1
+		beq $s5, $s7, Row3_1
+		
+		beq $t8, $t9, P4
+		
+	# Row 3: 
+	li $t6, 24 
+	lw $t7, board($t6)	# position 7
+	li $t6, 28 
+	lw $t8, board($t6)	# position 8
+	li $t6, 32  
+	lw $t9, board($t6)	# position 9
+	
+	Row3_1:
+		li $t6, 32
+		lw $s7, board($t6)
+		beq $s4, $s7, Row3_2
+		beq $s5, $s7, Row3_2
+		
+		beq $t7, $t8, P9
+	Row3_2:
+		li $t6, 28
+		lw $s7, board($t6)
+		beq $s4, $s7, Row3_3
+		beq $s5, $s7, Row3_3
+		
+		beq $t7, $t9, P8
+	Row3_3:
+		li $t6, 24
+		lw $s7, board($t6)
+		beq $s4, $s7, Column1_1
+		beq $s5, $s7, Column1_1
+		
+		beq $t8, $t9, P7
+		
+	# Column 1:
+	li $t6, 0
+	lw $t7, board($t6)	# position 1
+	li $t6, 12 
+	lw $t8, board($t6)	# position 4
+	li $t6, 24 
+	lw $t9, board($t6)	# position 7
+	
+	Column1_1:
+		li $t6, 24
+		lw $s7, board($t6)
+		beq $s4, $s7, Column1_2
+		beq $s5, $s7, Column1_2
+		beq $t7, $t8, P7
+	Column1_2:
+		li $t6, 12
+		lw $s7, board($t6)
+		beq $s4, $s7, Column1_3
+		beq $s5, $s7, Column1_3
+		
+		beq $t7, $t9, P4
+	Column1_3:
+		li $t6, 0
+		lw $s7, board($t6)
+		beq $s4, $s7, Column2_1
+		beq $s5, $s7, Column2_1
+		
+		beq $t8, $t9, P1
+	
+	# Column 2:
+	li $t6, 4 
+	lw $t7, board($t6)	# position 2
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 28  
+	lw $t9, board($t6)	# position 8
+	
+	Column2_1:
+		li $t6, 28
+		lw $s7, board($t6)
+		beq $s4, $s7, Column2_2
+		beq $s5, $s7, Column2_2
+		
+
+		beq $t7, $t8, P8
+	Column2_2:
+		li $t6, 16
+		lw $s7, board($t6)
+		beq $s4, $s7, Column2_3
+		beq $s5, $s7, Column2_3
+	
+		beq $t7, $t9, P5
+	Column2_3:
+		li $t6, 4
+		lw $s7, board($t6)
+		beq $s4, $s7, Column3_1
+		beq $s5, $s7, Column3_1
+	
+		beq $t8, $t9, P2
+
+	# Column 3:
+	li $t6, 8 
+	lw $t7, board($t6)	# position 3
+	li $t6, 20 
+	lw $t8, board($t6)	# position 6
+	li $t6, 32  
+	lw $t9, board($t6)	# position 9
+	
+	Column3_1:
+		li $t6, 32
+		lw $s7, board($t6)
+		beq $s4, $s7, Column3_2
+		beq $s5, $s7, Column3_2
+	
+		beq $t7, $t8, P9
+	Column3_2:
+		li $t6, 20
+		lw $s7, board($t6)
+		beq $s4, $s7, Column3_3
+		beq $s5, $s7, Column3_3
+	
+		beq $t7, $t9, P6
+	Column3_3:
+		li $t6, 8
+		lw $s7, board($t6)
+		beq $s4, $s7, Diagonal1_1
+		beq $s5, $s7, Diagonal1_1
+	
+		beq $t8, $t9, P3
+		
+	# All combinations to win diagonaly
+	
+	# Diagonal 1:
+	li $t6, 24 
+	lw $t7, board($t6)	# position 7
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 8  
+	lw $t9, board($t6)	# position 3
+	
+	Diagonal1_1:
+		li $t6, 8
+		lw $s7, board($t6)
+		beq $s4, $s7, Diagonal1_2
+		beq $s5, $s7, Diagonal1_2
+		
+		beq $t7, $t8, P3
+	Diagonal1_2:
+		li $t6, 16
+		lw $s7, board($t6)
+		beq $s4, $s7, Diagonal1_3
+		beq $s5, $s7, Diagonal1_3
+	
+		beq $t7, $t9, P5
+	Diagonal1_3:
+		li $t6, 24
+		lw $s7, board($t6)
+		beq $s4, $s7, Diagonal2_1
+		beq $s5, $s7, Diagonal2_1
+		
+		beq $t8, $t9, P7
+	
+	# Diagonal 2:
+	li $t6, 0 
+	lw $t7, board($t6)	# position 1
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 32  
+	lw $t9, board($t6)	# position 9
+	
+	Diagonal2_1:
+		li $t6, 32
+		lw $s7, board($t6)
+		beq $s4, $s7, Diagonal2_2
+		beq $s5, $s7, Diagonal2_2
+		
+		beq $t7, $t8, P9
+	Diagonal2_2:
+	
+		li $t6, 16
+		lw $s7, board($t6)
+		beq $s4, $s7, Diagonal2_3
+		beq $s5, $s7, Diagonal2_3
+		
+		beq $t7, $t9, P5
+	Diagonal2_3:
+		li $t6, 0
+		lw $s7, board($t6)
+		beq $s4, $s7, random
+		beq $s5, $s7, random
+		
+		beq $t8, $t9, P1
+	
+	random:
+		jal randomizer	# if there are no possibilities to win or prevent a win, take a random spot 
+	j switchBack	# to exit this loop
+	
+	P1:	# puts a character in position 1
+		li $t6, 0
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the hardBot loop
+	P2:
+		li $t6, 4
+		sw $s6, board($t6)
+		j switchBack
+	P3:
+		li $t6, 8
+		sw $s6, board($t6)
+		j switchBack
+	P4:
+		li $t6, 12
+		sw $s6, board($t6)
+		j switchBack
+	P5:
+		li $t6, 16
+		sw $s6, board($t6)
+		j switchBack
+	P6:
+		li $t6, 20
+		sw $s6, board($t6)
+		j switchBack
+	P7:
+		li $t6, 24
+		sw $s6, board($t6)
+		j switchBack
+	P8:
+		li $t6, 28
+		sw $s6, board($t6)
+		j switchBack
+	P9:
+		li $t6, 32
+		sw $s6, board($t6)
+		j switchBack
+		
+	switchBack:	# to exit this loop
+		lw $ra, 0($sp)	# get original 
+		addi $sp, $sp, 4	# reset stack pointer
+		jr $ra	# jump back to return address
+		
+#-------------------------------------------------------------------------------------------------------------------------------
 
 exit: 
 	li $v0, 10
