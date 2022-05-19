@@ -973,16 +973,68 @@ hardBot:
 		jr $ra	# jump back to return address
 			
 randomizer:
-	#max number (0-8)
-	addi $a1, $zero, 9
+
+	#push to stack
+	subi $sp, $sp, 4
+	sw $ra, ($sp)
 	
-	#random int into a0
-	addi $v0, $zero, 42
-	syscall
+	#assume input is invalid
+	li $s3, 0
 	
-	#add 1 to a0 so range is 1-9
-	addi $a0, $a0, 1
+	random_input:
+
+		# if tile is empty, return placement
+		beq $s3, 1, exit_random
+	
+		#max number (0-8)
+		addi $a1, $zero, 9
+	
+		#random int into a0
+		addi $v0, $zero, 42
+		syscall
+	
+		#add 1 to a0 so range is 1-9
+		addi $a0, $a0, 1
+	
+		# check if tile is empty
+		jal check_if_not_overwriting_comp
+		
+		#save result to s3
+		move $s3, $v0
+	
+		j random_input
+		
+	
+	exit_random:
+	
+		#pop from stack
+		lw $ra, ($sp)
+		addi $sp, $sp, 4
+		
+		jr $ra
+		
+check_if_not_overwriting_comp:
+	#locate corresponding value in table
+	mul $t0, $a0, 4
+	subi $t0, $t0, 4
+	
+	#t1 = s1 (board) + t0 (offset)
+	add $t1, $s1, $t0
+	
+	#t2 = value from table
+	lw $t2, ($t1)
+	
+	#is the spot empty?
+	bne $t2, 0, cannotOverwrite_comp
+	
+	#if so, we're good to go
+	li $v0, 1
 	jr $ra
+	
+	#if not, return
+	cannotOverwrite_comp:
+		li $v0, 0
+		jr $ra
 
 exit: 
 	#"We have a winner!"
