@@ -1330,8 +1330,7 @@ HardAI:
 	
 	random:
 		jal randomizer	# if there are no possibilities to win or prevent a win, take a random spot 
-		mul $a0, $a0, 4
-		sw $s6, board($a0)	# saves the character in this position of the board
+		jal place_cell
 	j switchBack	# to exit this loop
 	
 	P1:	# puts a character in position 1
