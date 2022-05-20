@@ -199,6 +199,9 @@ main:
 		#if someone won, we jump straight to the exit
 		jal check_win_condition
 		
+		# checks if all positions are filled in the case of a tie
+		jal check_if_full
+		
 		#switch control to other player
 		jal switch_player_control
 		
@@ -215,6 +218,9 @@ main:
 		
 		#did someone win?
 		jal check_win_condition
+		
+		# checks if all positions are filled in the case of a tie
+		jal check_if_full
 		
 		#switch control to other player
 		jal switch_player_control
