@@ -54,6 +54,7 @@ winner_player_X: .asciiz "Player X! \n"
 winner_player_O: .asciiz "Player O! \n"
 out_of_bounds: .asciiz "Please enter a valid input!\n"
 already_there: .asciiz "There's already a tile there!\n"
+draw_msg: .asciiz "We have a draw!"
 
 board: .word 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -620,6 +621,37 @@ switch_player_control:
 	switchToO: li $s6, 2
 	jr $ra
 	
+check_if_full:
+	li $t0, 0
+	
+	#loop through board to see if all values are nonzero
+	checkEmptyLoop:
+		bgt $t0, 32, checkEmptyExit
+		
+		#t1 = address of next tile from board
+		add $t1, $t0, $s1
+		
+		#t2 = value of next tile from board
+		lw $t2, ($t1)
+		
+		#there exists an empty tile
+		beq $t2, $zero, foundEmptyTile
+		
+		addi $t0, $t0, 4
+		j checkEmptyLoop
+		
+	checkEmptyExit:
+		#there were no empty tiles found
+		#we can't place anything anymore
+		#we can conclude that no player has won at this point
+		
+		li $s6, 0 #0 = no one won
+		j exit
+	
+	foundEmptyTile:
+		#there exists an empty tile
+		#we can continue like normal
+		jr $ra
 	
 #function:
 #	check values in the board table to see if a match 3 has been made.
@@ -678,6 +710,9 @@ check_win_condition:
 	li $a1, 16
 	li $a2, 24
 	jal checkLine
+
+	#Check if we have any empty tiles
+	jal check_if_full
 
 	#pop ra from sp
 	lw $ra, ($sp)
@@ -1037,6 +1072,9 @@ check_if_not_overwriting_comp:
 		jr $ra
 
 exit: 
+	#Is $s6 = 0? (do we have a draw?)
+	beq $s6, $zero, noOneWon
+
 	#"We have a winner!"
 	la $a0, win_msg
 	li $v0, 4
@@ -1061,8 +1099,13 @@ exit:
 		li $v0, 4
 		syscall
 		j terminate
-	
-	
+		
+	noOneWon:
+		la $a0, draw_msg
+		li $v0, 4
+		syscall
+		j terminate
+		
 terminate:
 	li $v0, 10
      	syscall 
