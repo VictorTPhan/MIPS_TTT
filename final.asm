@@ -203,7 +203,7 @@ main:
 		jal switch_player_control
 		
 		#computer move
-		jal hardBot
+		jal HardAI
 		
 		#print computer
 		la $a0, computer_msg
@@ -753,212 +753,568 @@ checkLine:
 
 	getOut: jr $ra
 			
-hardBot:
-	# used to initialize x and o values
+HardAI:
+	# used to check if 2 values are equal
 	li $s4, 1
-	li $s5, 2
+	li $t5, 4
 	 
 	# store return address
+	li $sp, 0
 	addi $sp, $sp, -4
-	sw $ra, 0($sp)
+	sw $ra, ($sp)
 	
 	# All the different combinations for a win
-	
-	# Row 1: 
-	li $t6, 0 
-	lw $t7, board($t6)	# position 1
-	li $t6, 4 
-	lw $t8, board($t6)	# position 2
-	li $t6, 8  
-	lw $t9, board($t6)	# position 3
-	
 	Row1_1:	
+		# Used to call the function to get the values in the row
+		jal SetRow1
+		
+		# Checks if position is taken 
 		li $t6, 8		# 3rd position on the board
 		lw $s7, board($t6)	# Get the value in position 3
-		bgt $s7, $0, Row1_2	# If there is already a Xor an O in this position, move on to check the next combination		
-		beq $t7, $t8, P3	# If position 2 and 3 have the same value, have a character be placed in position 3 to either win or stop opponent
+		bgt $s7, $0, Row1_2	# If there is already a character in this position, move on to the next combination		
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8	# Add the two values, Ex. 1+1=2, 1+2=3, 2+2=4
+		beq $t5, $s7, P3	# If if the sum of the values in position 1 and 2 == 4 then place an O in position 3
+		j Row1_2	# Go to next combination
+
+		# To prevent the player from winning
+		PreventRow1_1Win:
+			jal SetRow1	# Get the values in the row
+			li $t6, 8	# 3rd position on the board
+			lw $s7, board($t6)	# Get the value in position 3
+			bgt $s7, $0, PreventRow1_2Win	# If there is already a character in this position, move on to the next combination	
+		
+			mult $t7, $t8	# Multiply the values in position 2 and 3 
+			mflo $s7	# Put the result in $s7
+			beq $s7, $s4, P3	# 1x1 = 1, so if both == 1 then take position 3 to prevent a win
+			j PreventRow1_2Win	# Go to next prevent win combination
+
 	Row1_2:
+		# Checks if position is taken 
 		li $t6, 4
 		lw $s7, board($t6)
 		bgt $s7, $0, Row1_3
-		beq $t7, $t9, P2
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P2
+		j Row1_3
+		
+		# To prevent the player from winning
+		PreventRow1_2Win:
+			li $t6, 4
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventRow1_3Win
+		
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P2
+			j PreventRow1_3Win
+		
+
 	Row1_3:
+		# Checks if position is taken 
 		li $t6, 0
 		lw $s7, board($t6)
 		bgt $s7, $0, Row2_1
-		beq $t8, $t9, P1
 		
-	# Row 2:
-	li $t6, 12 
-	lw $t7, board($t6)	# position 4
-	li $t6, 16 
-	lw $t8, board($t6)	# position 5
-	li $t6, 20  
-	lw $t9, board($t6)	# position 6
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P1
+		j Row2_1
+		
+		# To prevent the player from winning
+		PreventRow1_3Win:
+			li $t6, 0
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventRow2_1Win
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P1
+			j PreventRow2_1Win
+		
+	
 	
 	Row2_1:
+		# Checks if position is taken 
+		jal SetRow2
 		li $t6, 20
 		lw $s7, board($t6)
 		bgt $s7, $0, Row2_2
-		beq $t7, $t8, P6
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8
+		beq $t5, $s7, P6
+		j Row2_2
+		
+		# To prevent the player from winning
+		PreventRow2_1Win:
+			jal SetRow2
+			li $t6, 20
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventRow2_2Win
+		
+			mult $t7, $t8
+			mflo $s7
+			beq $s7, $s4, P6
+			j PreventRow2_2Win
+
 	Row2_2:
+		# Checks if position is taken 
 		li $t6, 16
 		lw $s7, board($t6)
 		bgt $s7, $0, Row2_3
-		beq $t7, $t9, P5
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P5
+		j Row2_3
+		
+		# To prevent the player from winning
+		PreventRow2_2Win:
+			li $t6, 16
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventRow2_3Win
+		
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P5
+			j PreventRow2_3Win
+	
 	Row2_3:
+		# Checks if position is taken 
 		li $t6, 12
 		lw $s7, board($t6)
 		bgt $s7, $0, Row3_1
-		beq $t8, $t9, P4
 		
-	# Row 3: 
-	li $t6, 24 
-	lw $t7, board($t6)	# position 7
-	li $t6, 28 
-	lw $t8, board($t6)	# position 8
-	li $t6, 32  
-	lw $t9, board($t6)	# position 9
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P4
+		j Row3_1
+		
+		# To prevent the player from winning
+		PreventRow2_3Win:
+			li $t6, 12
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventRow3_1Win
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P4
+			j PreventRow3_1Win
 	
 	Row3_1:
+		# Checks if position is taken 
+		jal SetRow3
 		li $t6, 32
 		lw $s7, board($t6)
 		bgt $s7, $0, Row3_2
-		beq $t7, $t8, P9
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8
+		beq $t5, $s7, P9
+		j Row3_2
+		
+		# To prevent the player from winning
+		PreventRow3_1Win:
+			jal SetRow3
+			li $t6, 32
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventRow3_2Win
+			
+			mult $t7, $t8
+			mflo $s7
+			beq $s7, $s4, P9
+			j PreventRow3_2Win
+	
 	Row3_2:
+		# Checks if position is taken 
 		li $t6, 28
 		lw $s7, board($t6)
 		bgt $s7, $0, Row3_3
-		beq $t7, $t9, P8
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P8
+		j Row3_3
+		
+		# To prevent the player from winning
+		PreventRow3_2Win:
+			li $t6, 28
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventRow3_3Win
+		
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P8
+			j PreventRow3_3Win
+	
 	Row3_3:
+		# Checks if position is taken 
 		li $t6, 24
 		lw $s7, board($t6)
 		bgt $s7, $0, Column1_1
-		beq $t8, $t9, P7
 		
-	# Column 1:
-	li $t6, 0
-	lw $t7, board($t6)	# position 1
-	li $t6, 12 
-	lw $t8, board($t6)	# position 4
-	li $t6, 24 
-	lw $t9, board($t6)	# position 7
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P7
+		j Column1_1
+		
+		# To prevent the player from winning
+		PreventRow3_3Win:
+			li $t6, 24
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn1_1Win
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P7
+			j PreventColumn1_1Win
+		
 	
 	Column1_1:
+		# Checks if position is taken 
+		jal SetColumn1
 		li $t6, 24
 		lw $s7, board($t6)
 		bgt $s7, $0, Column1_2
-		beq $t7, $t8, P7
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8
+		beq $t5, $s7, P7
+		j Column1_2
+		
+		# To prevent the player from winning
+		PreventColumn1_1Win:
+			jal SetColumn1
+			li $t6, 24
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn1_2Win
+
+			mult $t7, $t8
+			mflo $s7
+			beq $s7, $s4, P7
+			j PreventColumn1_2Win
+	
 	Column1_2:
+		# Checks if position is taken 
 		li $t6, 12
 		lw $s7, board($t6)
 		bgt $s7, $0, Column1_3
-		beq $t7, $t9, P4
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P4
+		j Column1_3
+			
+		# To prevent the player from winning
+		PreventColumn1_2Win:
+			li $t6, 12
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn1_3Win
+		
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P4
+			j PreventColumn1_3Win
+	
 	Column1_3:
+		# Checks if position is taken 
 		li $t6, 0
 		lw $s7, board($t6)
 		bgt $s7, $0, Column2_1
-		beq $t8, $t9, P1
-	
-	# Column 2:
-	li $t6, 4 
-	lw $t7, board($t6)	# position 2
-	li $t6, 16 
-	lw $t8, board($t6)	# position 5
-	li $t6, 28  
-	lw $t9, board($t6)	# position 8
-	
+		
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P1
+		j Column2_1
+		
+		# To prevent the player from winning
+		PreventColumn1_3Win:
+			li $t6, 0
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn2_1Win
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P1
+			j PreventColumn2_1Win
+
 	Column2_1:
+		# Checks if position is taken 
+		jal SetColumn2
 		li $t6, 28
 		lw $s7, board($t6)
 		bgt $s7, $0, Column2_2
-		beq $t7, $t8, P8
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8
+		beq $t5, $s7, P8
+		j Column2_2
+		
+		# To prevent the player from winning
+		PreventColumn2_1Win:
+			jal SetColumn2
+			li $t6, 28
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn2_2Win
+		
+			mult $t7, $t8
+			mflo $s7
+			beq $s7, $s4, P8
+			j PreventColumn2_2Win
+	
 	Column2_2:
+		# Checks if position is taken 
 		li $t6, 16
 		lw $s7, board($t6)
 		bgt $s7, $0, Column2_3
-		beq $t7, $t9, P5
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P5
+		j Column2_3
+		
+		# To prevent the player from winning
+		PreventColumn2_2Win:
+			li $t6, 16
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn2_3Win
+		
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P5
+			j PreventColumn2_3Win
+	
 	Column2_3:
+		# Checks if position is taken 
 		li $t6, 4
 		lw $s7, board($t6)
 		bgt $s7, $0, Column3_1
-		beq $t8, $t9, P2
+		
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P2
+		j Column3_1
+		
+		# To prevent the player from winning
+		PreventColumn2_3Win:
+			li $t6, 4
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn3_1Win
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P2
+			j PreventColumn3_1Win
 
-	# Column 3:
-	li $t6, 8 
-	lw $t7, board($t6)	# position 3
-	li $t6, 20 
-	lw $t8, board($t6)	# position 6
-	li $t6, 32  
-	lw $t9, board($t6)	# position 9
-	
 	Column3_1:
+		# Checks if position is taken 
+		jal SetColumn3
 		li $t6, 32
 		lw $s7, board($t6)
 		bgt $s7, $0, Column3_2
-		beq $t7, $t8, P9
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8
+		beq $t5, $s7, P9
+		j Column3_2
+		
+		# To prevent the player from winning
+		PreventColumn3_1Win:
+			jal SetColumn3
+			li $t6, 32
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn3_2Win
+		
+			mult $t7, $t8
+			mflo $s7
+			beq $s7, $s4, P9
+			j PreventColumn3_2Win
+		
 	Column3_2:
+		# Checks if position is taken 
 		li $t6, 20
 		lw $s7, board($t6)
 		bgt $s7, $0, Column3_3
-		beq $t7, $t9, P6
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P6
+		j Column3_3
+		
+		# To prevent the player from winning
+		PreventColumn3_2Win:
+			li $t6, 20
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventColumn3_3Win
+		
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P6
+			j PreventColumn3_3Win
+	
 	Column3_3:
+		# Checks if position is taken 
 		li $t6, 8
 		lw $s7, board($t6)
 		bgt $s7, $0, Diagonal1_1
-		beq $t8, $t9, P3
+		
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P3
+		j Diagonal1_1
+		
+		# To prevent the player from winning
+		PreventColumn3_3Win:
+			li $t6, 8
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventDiagonal1_1Win
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P3
+			j PreventDiagonal1_1Win
 		
 	# All combinations to win diagonaly
-	
-	# Diagonal 1:
-	li $t6, 24 
-	lw $t7, board($t6)	# position 7
-	li $t6, 16 
-	lw $t8, board($t6)	# position 5
-	li $t6, 8  
-	lw $t9, board($t6)	# position 3
-	
 	Diagonal1_1:
+		# Checks if position is taken 
+		jal SetDiagonal1
 		li $t6, 8
 		lw $s7, board($t6)
 		bgt $s7, $0, Diagonal1_2
-		beq $t7, $t8, P3
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8
+		beq $t5, $s7, P3
+		j Diagonal1_2
+		
+		# To prevent the player from winning
+		PreventDiagonal1_1Win:
+			jal SetDiagonal1
+			li $t6, 8
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventDiagonal1_2Win
+		
+			mult $t7, $t8
+			mflo $s7
+			beq $s7, $s4, P3
+			j PreventDiagonal1_2Win
+		
 	Diagonal1_2:
+		# Checks if position is taken 
 		li $t6, 16
 		lw $s7, board($t6)
 		bgt $s7, $0, Diagonal1_3
-		beq $t7, $t9, P5
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P5
+		j Diagonal1_3
+		
+		# To prevent the player from winning
+		PreventDiagonal1_2Win:
+			li $t6, 16
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventDiagonal1_3Win
+		
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P5
+			j PreventDiagonal1_3Win
+	
 	Diagonal1_3:
+		# Checks if position is taken 
 		li $t6, 24
 		lw $s7, board($t6)
 		bgt $s7, $0, Diagonal2_1
-		beq $t8, $t9, P7
-	
-	# Diagonal 2:
-	li $t6, 0 
-	lw $t7, board($t6)	# position 1
-	li $t6, 16 
-	lw $t8, board($t6)	# position 5
-	li $t6, 32  
-	lw $t9, board($t6)	# position 9
-	
+		
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P7
+		j Diagonal2_1
+		
+		# To prevent the player from winning
+		PreventDiagonal1_3Win:
+			li $t6, 24
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventDiagonal2_1Win
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P7
+			j PreventDiagonal2_1Win
+
 	Diagonal2_1:
+		# Checks if position is taken 
+		jal SetDiagonal2
 		li $t6, 32
 		lw $s7, board($t6)
 		bgt $s7, $0, Diagonal2_2
-		beq $t7, $t8, P9
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t8
+		beq $t5, $s7, P9
+		j Diagonal2_2
+		
+		# To prevent the player from winning
+		PreventDiagonal2_1Win:
+			jal SetDiagonal2
+			li $t6, 32
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventDiagonal2_2Win
+			
+			mult $t7, $t8
+			mflo $s7
+			beq $s7, $s4, P9
+			j PreventDiagonal2_2Win
+		
 	Diagonal2_2:
-	
+		# Checks if position is taken 
 		li $t6, 16
 		lw $s7, board($t6)
 		bgt $s7, $0, Diagonal2_3
-		beq $t7, $t9, P5
+		
+		# Checks if computer can get a win
+		add $s7, $t7, $t9
+		beq $t5, $s7, P5
+		j Diagonal2_3
+		
+		# To prevent the player from winning
+		PreventDiagonal2_2Win:
+			li $t6, 16
+			lw $s7, board($t6)
+			bgt $s7, $0, PreventDiagonal2_3Win
+	
+			mult $t7, $t9
+			mflo $s7
+			beq $s7, $s4, P5
+			j PreventDiagonal2_3Win
+	
 	Diagonal2_3:
+		# Checks if position is taken 
 		li $t6, 0
 		lw $s7, board($t6)
-		bgt $s7, $0, random
-		beq $t8, $t9, P1
+		bgt $s7, $0, PreventRow1_1Win
 		
+		# Checks if computer can get a win
+		add $s7, $t8, $t9
+		beq $t5, $s7, P1
+		j PreventRow1_1Win
+		
+		# To prevent the player from winning
+		PreventDiagonal2_3Win:
+			li $t6, 0
+			lw $s7, board($t6)
+			bgt $s7, $0, random
+		
+			mult $t8, $t9
+			mflo $s7
+			beq $s7, $s4, P1
+			j random
+	
 	random:
 		jal randomizer	# if there are no possibilities to win or prevent a win, take a random spot 
 		mul $a0, $a0, 4
@@ -966,46 +1322,127 @@ hardBot:
 	j switchBack	# to exit this loop
 	
 	P1:	# puts a character in position 1
-		li $t6, 0
+		li $t6, 0	# create a pointer
 		sw $s6, board($t6)	# saves the character in this position of the board
-		j switchBack	# to exit the hardBot loop
-	P2:
-		li $t6, 4
-		sw $s6, board($t6)
-		j switchBack
-	P3:
-		li $t6, 8
-		sw $s6, board($t6)
-		j switchBack
-	P4:
-		li $t6, 12
-		sw $s6, board($t6)
-		j switchBack
-	P5:
-		li $t6, 16
-		sw $s6, board($t6)
-		j switchBack
-	P6:
-		li $t6, 20
-		sw $s6, board($t6)
-		j switchBack
-	P7:
-		li $t6, 24
-		sw $s6, board($t6)
-		j switchBack
-	P8:
-		li $t6, 28
-		sw $s6, board($t6)
-		j switchBack
-	P9:
-		li $t6, 32
-		sw $s6, board($t6)
-		j switchBack
+		j switchBack	# to exit the HardAI loop
+	P2:	# puts a character in position 2
+		li $t6, 4	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
+	P3:	# puts a character in position 3
+		li $t6, 8	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
+	P4:	# puts a character in position 4
+		li $t6, 12	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
+	P5:	# puts a character in position 5
+		li $t6, 16	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
+	P6:	# puts a character in position 6
+		li $t6, 20	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
+	P7:	# puts a character in position 7
+		li $t6, 24	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
+	P8:	# puts a character in position 8
+		li $t6, 28	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
+	P9:	# puts a character in position 9
+		li $t6, 32	# create a pointer
+		sw $s6, board($t6)	# saves the character in this position of the board
+		j switchBack	# to exit the HardAI loop
 		
 	switchBack:	# to exit this loop
-		lw $ra, 0($sp)	# get original 
+		lw $ra, ($sp)	# get original 
 		addi $sp, $sp, 4	# reset stack pointer
 		jr $ra	# jump back to return address
+		
+	# Puts the values on the board into registers to check each combination
+	# Row 1 
+	SetRow1:
+	li $t6, 0 
+	lw $t7, board($t6)	# position 1
+	li $t6, 4 
+	lw $t8, board($t6)	# position 2
+	li $t6, 8  
+	lw $t9, board($t6)	# position 3
+	jr $ra
+	
+	# Row 2
+	SetRow2:
+	li $t6, 12 
+	lw $t7, board($t6)	# position 4
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 20  
+	lw $t9, board($t6)	# position 6
+	jr $ra
+	
+	# Row 3
+	SetRow3:
+	li $t6, 24 
+	lw $t7, board($t6)	# position 7
+	li $t6, 28 
+	lw $t8, board($t6)	# position 8
+	li $t6, 32  
+	lw $t9, board($t6)	# position 9
+	jr $ra
+	
+	# Column 1
+	SetColumn1:
+	li $t6, 0
+	lw $t7, board($t6)	# position 1
+	li $t6, 12 
+	lw $t8, board($t6)	# position 4
+	li $t6, 24 
+	lw $t9, board($t6)	# position 7
+	jr $ra	
+		
+	# Column 2
+	SetColumn2:
+	li $t6, 4 
+	lw $t7, board($t6)	# position 2
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 28  
+	lw $t9, board($t6)	# position 8
+	jr $ra	
+		
+	# Column 3
+	SetColumn3:
+	li $t6, 8 
+	lw $t7, board($t6)	# position 3
+	li $t6, 20 
+	lw $t8, board($t6)	# position 6
+	li $t6, 32  
+	lw $t9, board($t6)	# position 9
+	jr $ra	
+		
+	# Diagonal 1
+	SetDiagonal1:
+	li $t6, 24 
+	lw $t7, board($t6)	# position 7
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 8  
+	lw $t9, board($t6)	# position 3
+	jr $ra
+	
+	# Diagonal 2
+	SetDiagonal2:
+	li $t6, 0 
+	lw $t7, board($t6)	# position 1
+	li $t6, 16 
+	lw $t8, board($t6)	# position 5
+	li $t6, 32  
+	lw $t9, board($t6)	# position 9
+	jr $ra
 			
 randomizer:
 
