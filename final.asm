@@ -450,12 +450,15 @@ user_input:
 		#validation(a0, 1, 9)
 		#will check is a0 is between 1 and 9 (inclusive)
 		move $a0, $v0
+		move $t0, $a0
 		li $a1, 1
 		li $a2, 9
 		jal validation
 		
 		#save result to s3
 		move $s3, $v0
+		
+		move $a0, $t0
 		
 		jal check_if_not_overwriting
 		
