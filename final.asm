@@ -1,4 +1,4 @@
-#Min Jung, Victor Phan, Owen Lovett, Bailey Chean, _____  -- 5/15/2022
+#Min Jung, Victor Phan, Owen Lovett, Bailey Chean, Sunveer Bhullar -- 5/15/2022
 #final.asm
 #Description: Create Tic-Tac -Toe game using MIPS
 #	Display game board.
